@@ -1,0 +1,181 @@
+#!/home/administrator/Git/Local/mfa/venv/bin/python
+#
+# mfa - part of the mfa project
+# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+import typer
+import json
+import generators
+import keyring_storage
+import seed_file
+from getpass import getpass
+
+__author__ = "Scott Wyman (development@scottwyman.me)"
+
+__license__ = "GPLv3"
+
+__date__ = "July 26, 2023"
+
+__all__ = [""]
+
+__doc__ = (
+'''
+A simple TOTP MFA cli tool
+'''
+)
+
+app = typer.Typer()
+
+class SeedDict(dict):
+    def __init__(self, file_name: str="/home/administrator/mfa_secrets.aes"):
+        self.file_name = file_name
+        
+        # Decrypt and add the contents of the seed_file to this
+        #  instances dict
+        #
+        # Get the password from the keyring if it exists
+        password = keyring_storage.get_keyring_password()
+        seed_file_content = None
+        while True:
+            # If there isn't a password in the keyring, or the
+            #  wrong decryption password was used
+            if not password or seed_file_content == False:
+                # Ask the user for a password
+                password = getpass("Enter the seed file's decryption key: ")
+            try:
+                # Decrypt the seed file
+                seed_file_content = seed_file.decrypt_from_file(file_name, password)
+            except FileNotFoundError:
+                self.password = password
+                self.write()
+                seed_file_content = seed_file.decrypt_from_file(file_name, password)
+
+            # If the incorrect key is given
+            if seed_file_content == False:
+                print(' - Incorrect Password, Try Again - ')
+                # Loop to decrypt again
+                continue
+            # If the file is decrypted successfully, update the
+            #  keyring password and break
+            keyring_storage.set_keyring_password(password)
+            self.password = password
+            break
+       
+        if seed_file_content:
+            for key,value in seed_file_content.items():
+                self[key] = value
+
+
+    def __setitem__(self, key, value):
+        if generators.verify_totp_seed(value):
+            super().__setitem__(key, value)
+
+    def __getitem__(self, key):
+        if key not in self:
+            raise KeyError('Key not found')
+
+        return super().__getitem__(key)
+
+    def write(self):
+        data = json.dumps(self)
+        seed_file.encrypt_to_file(data, self.file_name, self.password)
+
+seed_dict = SeedDict()
+
+
+@app.command()
+def show(name: str):
+    '''
+    Show a single name and generated TOTP code from the seed file
+
+    Args:
+        name (str):
+            The name used to refence the seed phrase in the seed file
+    '''
+    if name in seed_dict:
+        code = generators.get_totp_code(seed_dict[name])
+        print(f"{name} - {code}")
+    else:
+        print(f"{name} not in seed file")
+
+@app.command()
+def show_all():
+    '''
+    Show all the names and generated TOTP codes from the seed file
+    '''
+    if seed_dict:
+        for name in seed_dict:
+            show(name)
+
+    else:
+        print(" - Seed file is empty - ")
+
+@app.command()
+def get_seed(name: str):
+    '''
+    Get a seed prhase from your seed file
+
+    Args:
+        name (str):
+            The name used to reference the seed prhase in the seed file 
+    '''
+    if name in seed_dict:
+        print(f"{name} - {seed_dict[name]}")
+    else:
+        print(f"{name} not in seed file")
+
+@app.command()
+def add(name: str, seed: str, force: bool=False):
+    '''
+    Add a new entry to your seed file
+
+    Args:
+        name (str):
+            The name to reference your seed by
+        
+        seed (str):
+            The TOTP seed phrase given by the application or service
+
+        force (str):
+            Forcibly change/update your entry's seed phrase
+    '''
+    if name in seed_dict and force == False:
+        print(f"{name} already exists, pass '--force' to true to overwrite")
+    else:
+        seed_dict[name] = seed
+        if seed_dict.get(name) == seed:
+            show(name)
+        else:
+            print("Incorrect seed format")
+        seed_dict.write()
+
+@app.command()
+def delete(name: str):
+    '''
+    Delete an entry from your seed file
+
+    Args:
+        name (str):
+            The name of the entry
+    '''
+    if name in seed_dict:
+        del seed_dict[name]
+        seed_dict.write()
+
+
+if __name__=="__main__":
+    app()
