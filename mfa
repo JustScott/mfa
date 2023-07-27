@@ -23,6 +23,7 @@ import generators
 import keyring_storage
 import seed_file
 from getpass import getpass
+import shutil
 
 __author__ = "Scott Wyman (development@scottwyman.me)"
 
@@ -34,14 +35,35 @@ __all__ = [""]
 
 __doc__ = (
 '''
-A simple TOTP MFA cli tool
+A simple TOTP MFA CLI authenticator
 '''
 )
 
-app = typer.Typer()
 
 class SeedDict(dict):
+    '''
+    Instances operate as a dictionary with extra methods for
+    checking keys and values, encrypting and writing the dictionary
+    content to an aes file, etc.
+
+    Attributes:
+        self.file_name (str):
+            The file name/file path of the encrypted seed file 
+    '''
     def __init__(self, file_name: str="/home/administrator/mfa_secrets.aes"):
+        '''
+        The initialization handles decrypting the content of the seed file
+        with the password stored in the keychain. It prompts the user for
+        the password if it can't be found in the keychain.
+
+        Args:
+            file_name (str, *optional):
+                DEFAULT /home/administrator/mfa_secrets.aes
+
+                The file name/file path of the encrypted seed file.
+                The file name should have a suffix of '.aes', otherwise
+                unexpected errors can happen during import and export.
+        '''
         self.file_name = file_name
         
         # Decrypt and add the contents of the seed_file to this
@@ -75,6 +97,7 @@ class SeedDict(dict):
             self.password = password
             break
        
+        # If the seed file has any seeds, add them to instance dict
         if seed_file_content:
             for key,value in seed_file_content.items():
                 self[key] = value
@@ -91,20 +114,22 @@ class SeedDict(dict):
         return super().__getitem__(key)
 
     def write(self):
-        data = json.dumps(self)
-        seed_file.encrypt_to_file(data, self.file_name, self.password)
+        '''
+        Write current seed dictionary to encrypted file
+        '''
+        seed_file.encrypt_to_file(self, self.file_name, self.password)
 
+
+app = typer.Typer()
 seed_dict = SeedDict()
 
-
 @app.command()
-def show(name: str):
+def show(name: str) -> None:
     '''
-    Show a single name and generated TOTP code from the seed file
+    Show a single name and generated TOTP code
 
-    Args:
-        name (str):
-            The name used to refence the seed phrase in the seed file
+    Args:\n
+        name (str): The name used to refence the seed phrase in the seed file
     '''
     if name in seed_dict:
         code = generators.get_totp_code(seed_dict[name])
@@ -113,9 +138,9 @@ def show(name: str):
         print(f"{name} not in seed file")
 
 @app.command()
-def show_all():
+def show_all() -> None:
     '''
-    Show all the names and generated TOTP codes from the seed file
+    Show all the names and generated TOTP codes
     '''
     if seed_dict:
         for name in seed_dict:
@@ -125,13 +150,12 @@ def show_all():
         print(" - Seed file is empty - ")
 
 @app.command()
-def get_seed(name: str):
+def show_seed(name: str) -> None:
     '''
-    Get a seed prhase from your seed file
+    Show a seed prhase from your seed file
 
-    Args:
-        name (str):
-            The name used to reference the seed prhase in the seed file 
+    Args:\n
+        name (str): The name used to reference the seed prhase in the seed file
     '''
     if name in seed_dict:
         print(f"{name} - {seed_dict[name]}")
@@ -139,19 +163,16 @@ def get_seed(name: str):
         print(f"{name} not in seed file")
 
 @app.command()
-def add(name: str, seed: str, force: bool=False):
+def add(name: str, seed: str, force: bool=False) -> None:
     '''
     Add a new entry to your seed file
 
-    Args:
-        name (str):
-            The name to reference your seed by
-        
-        seed (str):
-            The TOTP seed phrase given by the application or service
-
-        force (str):
-            Forcibly change/update your entry's seed phrase
+    Args:\n
+        name (str): The name to reference your seed by
+        \n
+        seed (str): The TOTP seed phrase given by the application or service
+        \n
+        force (str): Forcibly change/update your entry's seed phrase
     '''
     if name in seed_dict and force == False:
         print(f"{name} already exists, pass '--force' to true to overwrite")
@@ -164,18 +185,69 @@ def add(name: str, seed: str, force: bool=False):
         seed_dict.write()
 
 @app.command()
-def delete(name: str):
+def delete(name: str) -> None:
     '''
     Delete an entry from your seed file
 
-    Args:
-        name (str):
-            The name of the entry
+    Args:\n
+        name (str): The name of the entry
     '''
     if name in seed_dict:
         del seed_dict[name]
         seed_dict.write()
 
+@app.command()
+def export_seeds(encrypted: bool=True, file_name: str='mfa_export') -> None:
+    '''
+    Export seed file content to a file in an encrypted or plain format
+
+    Args:\n
+        encrypted (str, *optional):\n
+            Whether to export the file as encrytped or plain
+        \n
+        file_name (str, *optional):\n
+            The name of the file to export to, .aes or .json are
+            automatically appended.
+
+    '''
+    if encrypted:
+        shutil.copyfile(seed_dict.file_name, file_name+'.aes')
+        return
+    with open(file_name+'.json', 'w') as file:
+        json.dump(seed_dict, file)
+
+@app.command()
+def import_seeds(file_name: str) -> None:
+    '''
+    Import a previously exported file, overwriting the existing seeds
+
+    Args:\n
+        file_name (str):\n
+            The previously exported file needs to either have a .aes or .json
+            file suffix/extension.
+    '''
+    try:
+        # if encrypted, copy straight into directory
+        if '.aes' in file_name:
+            shutil.copyfile(file_name, seed_dict.file_name)
+
+        # If plaintext, read in file content, create a new SeedDict instance
+        #  which will encrypt the content to the mfa_secrets.aes file
+        elif '.json' in file_name:
+            with open(file_name, 'r') as file:
+                file_content = json.load(file_name)
+
+            new_seed_dict = SeedDict()
+            for name,seed in file_content.items():
+                new_seed_dict[name] = seed
+            new_seed_dict.write()
+        else:
+            print("File name must have a .aes or .json suffix")
+            quit(1)
+
+    except FileNotFoundError:
+        print(f"'{file_name}' doesn't exists")
+        quit(1)
 
 if __name__=="__main__":
     app()

@@ -24,23 +24,31 @@ __author__ = "Scott Wyman (development@scottwyman.me)"
 
 __license__ = "GPLv3"
 
-__date__ = "July 26, 2023"
+__created__ = "July 26, 2023"
 
-__all__ = [""]
+__updated__ = "July 27, 2023"
+
+__all__ = ["set_keyring_password", "get_keyring_password"]
 
 __doc__ = (
 '''
-Manages storing the seed file's encryption key in the users keyring
+Manages storing the seed file's encryption password in the users keyring
 '''
 )
 
-
+# Arbitrary variables for locating the password in the keyring
 USERNAME = "python_keyring_user"
 SERVICE_NAME = "mfa_keyring"
 
 def set_keyring_password(password):
+    '''
+    Set the seed file encryption password in the keyring
+    '''
     keyring.set_password(SERVICE_NAME, USERNAME, password)
 
 def get_keyring_password():
+    '''
+    Get the seed file encryption password from the keyring
+    '''
     return keyring.get_password(SERVICE_NAME, USERNAME)
 

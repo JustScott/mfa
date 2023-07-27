@@ -17,6 +17,7 @@
 
 
 import pyotp
+from typing import Union
 
 __author__ = "Scott Wyman (development@scottwyman.me)"
 
@@ -24,11 +25,11 @@ __license__ = "GPLv3"
 
 __date__ = "July 26, 2023"
 
-__all__ = [""]
+__all__ = ["verify_totp_seed", "get_totp_code"]
 
 __doc__ = (
 '''
-The tools for generating and verifying totp codes & seeds
+Functions for generating and verifying totp codes & seeds
 '''
 )
 
@@ -36,19 +37,30 @@ The tools for generating and verifying totp codes & seeds
 def verify_totp_seed(seed: str) -> bool:
     '''
     Verifies the format of a totp seed phrase/key
+
+    Args:
+        seed (str): The TOTP seed
+    
+    Returns:
+        bool: True if correctly formatted, otherwise False
     '''
     if get_totp_code(seed):
         return True
     return False
 
-def get_totp_code(seed: str) -> int:
+def get_totp_code(seed: str) -> Union[int, bool]:
+    '''
+
+    Args:
+        seed (str): The TOTP seed
+
+    Returns:
+        int or bool: 
+            The current TOTP code if a valid seed is given, otherwise False
+    '''
     try:
-        return pyotp.TOTP(seed).now()
+        return int(pyotp.TOTP(seed).now())
     except Exception:
         return False
-
-if __name__=="__main__":
-    example_seed = "7M5JHU5DUM7KV3UC"
-    print(get_totp_code(example_seed))
 
 
