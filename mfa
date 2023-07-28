@@ -77,7 +77,11 @@ class SeedDict(dict):
             #  wrong decryption password was used
             if not password or seed_file_content == False:
                 # Ask the user for a password
-                password = getpass("Enter the seed file's decryption key: ")
+                try:
+                    password = getpass("Enter the seed file's decryption key: ")
+                except KeyboardInterrupt: # except a keyboard interrupt
+                    print('\nCancelled')
+                    quit(1)
             try:
                 # Decrypt the seed file
                 seed_file_content = seed_file.decrypt_from_file(file_name, password)
