@@ -117,7 +117,8 @@ class SeedDict(dict):
         '''
         Write current seed dictionary to encrypted file
         '''
-        seed_file.encrypt_to_file(self, self.file_name, self.password)
+        data = dict(self)
+        seed_file.encrypt_to_file(data, self.file_name, self.password)
 
 
 app = typer.Typer()
@@ -152,10 +153,10 @@ def show_all() -> None:
 @app.command()
 def show_seed(name: str) -> None:
     '''
-    Show a seed prhase from your seed file
+    Show a seed phrase from your seed file
 
     Args:\n
-        name (str): The name used to reference the seed prhase in the seed file
+        name (str): The name used to reference the seed phrase in the seed file
     '''
     if name in seed_dict:
         print(f"{name} - {seed_dict[name]}")
@@ -197,24 +198,37 @@ def delete(name: str) -> None:
         seed_dict.write()
 
 @app.command()
-def export_seeds(encrypted: bool=True, file_name: str='mfa_export') -> None:
+def export_seeds(encrypt: bool=True, file_name: str="") -> None:
     '''
-    Export seed file content to a file in an encrypted or plain format
+    Export seed file content to a file or stdout in an encrypted or plain format
 
     Args:\n
-        encrypted (str, *optional):\n
-            Whether to export the file as encrytped or plain
+        encrypt (bool, *optional):\n
+            Whether to export the file as encrypted or plain
         \n
         file_name (str, *optional):\n
-            The name of the file to export to, .aes or .json are
-            automatically appended.
+            The name of the file to export to. Output is directed to
+            stdout if no file_name is provided.
 
     '''
-    if encrypted:
-        shutil.copyfile(seed_dict.file_name, file_name+'.aes')
+    if not file_name:
+        if encrypt:
+            # print the seed files encrypted content to stdout with quit
+            with open(seed_dict.file_name, 'r') as file:
+                print(file.read())
+                return
+        # print the unencrypted seeds to stdout with quit
+        print(json.dumps(seed_dict))    
         return
-    with open(file_name+'.json', 'w') as file:
-        json.dump(seed_dict, file)
+    
+    if file_name:
+        if encrypt:
+            # Copy the seed files encrypted content to the export file
+            shutil.copyfile(seed_dict.file_name, file_name)
+            return
+        # Write the un-encrypted seed dict to the file
+        with open(file_name, 'w') as export_file: 
+            json.dump(seed_dict, export_file)
 
 @app.command()
 def import_seeds(file_name: str) -> None:
@@ -227,23 +241,28 @@ def import_seeds(file_name: str) -> None:
             file suffix/extension.
     '''
     try:
-        # if encrypted, copy straight into directory
-        if '.aes' in file_name:
-            shutil.copyfile(file_name, seed_dict.file_name)
-
-        # If plaintext, read in file content, create a new SeedDict instance
-        #  which will encrypt the content to the mfa_secrets.aes file
-        elif '.json' in file_name:
+        # Try loading as json
+        try:
+            # If plaintext, read in file content, create a new SeedDict instance
+            #  which will encrypt the content to the mfa_secrets.aes file
             with open(file_name, 'r') as file:
-                file_content = json.load(file_name)
+                file_content = json.load(file)
 
             new_seed_dict = SeedDict()
             for name,seed in file_content.items():
                 new_seed_dict[name] = seed
             new_seed_dict.write()
-        else:
-            print("File name must have a .aes or .json suffix")
-            quit(1)
+
+        # If the file doesn't contain valid json data
+        except (AttributeError,json.decoder.JSONDecodeError):
+            # If the file decrypts successfully
+            if seed_file.decrypt_from_file(file_name, seed_dict.password):
+                # Copy the encrypted file directly
+                shutil.copyfile(file_name, seed_dict.file_name)
+                return
+
+            # If the file didn't decrypt correctly
+            print(f"Either the incorrect password was used, or '{file_name}' is corrupt")
 
     except FileNotFoundError:
         print(f"'{file_name}' doesn't exists")
