@@ -28,7 +28,11 @@ __created__ = "July 26, 2023"
 
 __updated__ = "July 27, 2023"
 
-__all__ = ["set_keyring_password", "get_keyring_password"]
+__all__ = [
+    "set_keyring_password",
+    "get_keyring_password",
+    "delete_keyring_password"
+]
 
 __doc__ = (
 '''
@@ -51,4 +55,10 @@ def get_keyring_password():
     Get the seed file encryption password from the keyring
     '''
     return keyring.get_password(SERVICE_NAME, USERNAME)
+
+def delete_keyring_password():
+    '''
+    Get the seed file encryption password from the keyring
+    '''
+    return keyring.delete_password(SERVICE_NAME, USERNAME)
 
