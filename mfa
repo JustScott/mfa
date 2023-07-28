@@ -268,5 +268,20 @@ def import_seeds(file_name: str) -> None:
         print(f"'{file_name}' doesn't exists")
         quit(1)
 
+@app.command()
+def lock():
+    '''
+    Lock the seed file, AKA remove the password from the keyring
+    '''
+    keyring_storage.delete_keyring_password()
+
+@app.command()
+def auto_lock(minutes: str):
+    '''
+    Start a background script that locks the seed file, AKA removes the
+    password from the keyring
+    '''
+    pass
+
 if __name__=="__main__":
     app()
