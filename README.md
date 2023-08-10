@@ -24,7 +24,9 @@ add          # Add a new entry to your seed file
 delete       # Delete an entry from your seed file
 show         # Show a single name and generated TOTP code
 show-all     # Show all the names and generated TOTP codes
-show-seed     # Get a seed phrase from your seed file
+show-seed    # Get a seed phrase from your seed file
 export-seeds # Export the seed file content to a file (mfa_export.aes)
 import-seeds # Import a previously exported file, overwriting the existing seeds
+lock         # Lock the seed file, AKA remove the password from the keyring
+auto-lock    # Start a background script that runs the lock command at user set intervals
 ```

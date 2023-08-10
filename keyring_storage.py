@@ -1,3 +1,5 @@
+#!/home/administrator/Git/Local/mfa/venv/bin/python
+#
 # keyring_storage.py - part of the mfa project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
@@ -44,6 +46,36 @@ Manages storing the seed file's encryption password in the users keyring
 USERNAME = "python_keyring_user"
 SERVICE_NAME = "mfa_keyring"
 
+# Check if there's a suitable keyring available for the program to use
+try:
+    keyring.get_password("test", "test")
+except keyring.errors.NoKeyringError:
+    print(
+"""
+
+!-Missing a compatible keyring backend-!
+
+Install one of the packages below from your system's package manager.
+
+
+Linux:
+------
+* KWallet (requires dbus)
+* SecretService (requires secretstorage)
+
+Mac:
+----
+* Keychain
+
+Windows:
+--------
+* Windows Credential Locker
+
+"""
+    )
+
+
+
 def set_keyring_password(password):
     '''
     Set the seed file encryption password in the keyring
@@ -58,7 +90,10 @@ def get_keyring_password():
 
 def delete_keyring_password():
     '''
-    Get the seed file encryption password from the keyring
+    Delete the seed file encryption password from the keyring
     '''
-    return keyring.delete_password(SERVICE_NAME, USERNAME)
+    try:
+        return keyring.delete_password(SERVICE_NAME, USERNAME)
+    except keyring.errors.PasswordDeleteError:
+        return True
 

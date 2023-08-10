@@ -24,6 +24,9 @@ import keyring_storage
 import seed_file
 from getpass import getpass
 import shutil
+import os
+import universal
+import config
 
 __author__ = "Scott Wyman (development@scottwyman.me)"
 
@@ -80,7 +83,7 @@ class SeedDict(dict):
                 try:
                     password = getpass("Enter the seed file's decryption key: ")
                 except KeyboardInterrupt: # except a keyboard interrupt
-                    print('\nCancelled')
+                    print('\nCanceled')
                     quit(1)
             try:
                 # Decrypt the seed file
@@ -127,6 +130,9 @@ class SeedDict(dict):
 
 app = typer.Typer()
 seed_dict = SeedDict()
+settings = config.Config(universal.CONFIG_FILE)
+
+ 
 
 @app.command()
 def show(name: str) -> None:
@@ -278,14 +284,44 @@ def lock():
     Lock the seed file, AKA remove the password from the keyring
     '''
     keyring_storage.delete_keyring_password()
+    print("Seed file locked!")
 
 @app.command()
-def auto_lock(minutes: str):
+def auto_lock(minutes: int):
     '''
-    Start a background script that locks the seed file, AKA removes the
-    password from the keyring
+    Lockout access to the seed file in x minute intervals
+
+    Starts a background script that runs the lock command at user set intervals
+    
+    Args:\n
+        minutes (int):
+            Access to the MFA codes will be locked every time this number
+            of minutes passes.
+
+            Set minutes to zero to turn off the locking
     '''
-    pass
+    # If the user passes a zero or a negative number,
+    #  set the config files auto_lock_interval to 0
+    if minutes <= 0:
+        settings['auto_lock_interval'] = 0
+        settings.write()
+        print("Auto locking turned off")
+        return
+
+    # Start the auto_lock.py script if it's not already running
+    elif not settings.get('auto_lock_interval'):
+        os.system(f'{universal.BASE_PATH}/venv/bin/python3 {universal.BASE_PATH}/auto_lock.py &')
+
+    settings['auto_lock_interval'] = minutes
+    settings.write()
+    print(f"Access to the MFA codes will be locked every {minutes} minute(s)")
+
 
 if __name__=="__main__":
+    # If the auto lock is on in the config file and the auto_lock.py script isn't running
+    if settings.get('auto_lock_interval') and not universal.process_is_running('python3', 'auto_lock.py'):
+        # Turn on auto locking with the saved interval
+        auto_lock(settings['auto_lock_interval'])
+
     app()
+

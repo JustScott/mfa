@@ -1,0 +1,58 @@
+#!/home/administrator/Git/Local/mfa/venv/bin/python
+#
+# auto_lock.py - part of the mfa project
+# Copyright (C) 2023, Scott Wyman, development@scottwyman.me
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import universal
+import time
+import config
+import os
+import keyring_storage
+
+__author__ = "Scott Wyman (development@scottwyman.me)"
+
+__license__ = "GPLv3"
+
+__date__ = "July 26, 2023"
+
+__all__ = [""]
+
+__doc__ = (
+'''
+A simple background script that continuously removes the
+seed encryption password from the systems keyring
+'''
+)
+
+
+def loop():
+    while True:
+        settings = config.Config(universal.CONFIG_FILE)
+        minutes = settings.get("auto_lock_interval", 0)
+
+        # If the minute value is zero, that's a single to stop
+        #  the script
+        if minutes <= 0:
+            quit()
+
+        seconds = minutes*60
+        time.sleep(seconds)
+        keyring_storage.delete_keyring_password()
+
+
+if __name__=="__main__":
+    loop()    
+
