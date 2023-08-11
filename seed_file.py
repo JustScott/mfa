@@ -22,6 +22,11 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from base64 import urlsafe_b64encode
 import json
 from typing import Union
+import universal
+import config
+import keyring_storage
+from getpass import getpass
+import generators
 
 __author__ = "Scott Wyman (development@scottwyman.me)"
 
@@ -39,6 +44,7 @@ Uses the built-in cryptography library to encrypt and decrypt
 the seed file using Fernet and the PBKDF2 algorithm 
 '''
 )
+
 
 def convert_user_key(key: str) -> bytes:
     '''
@@ -132,4 +138,90 @@ def decrypt_from_file(input_file: str, key: str) -> Union[dict, bool]:
         decrypted_data = decrypted_data.replace("\\", "")
 
     return json.loads(decrypted_data)
+
+
+class SeedDict(dict):
+    _settings = config.Config(universal.CONFIG_FILE_PATH)
+    # Get the seed_file_path from the config file if it exists
+    SEED_FILE_PATH = _settings.get("seed_file_path")
+    # If the seed_file_path key doesn't exist in the database, and doesn't
+    #  have a valid value
+    if not SEED_FILE_PATH:
+        # Set the seed file path in the config file to the default path
+        _settings['seed_file_path'] = universal.HOME_PATH+"/mfa_secrets.aes"
+        # Set the SEED_FILE_PATH class attribute
+        SEED_FILE_PATH = _settings['seed_file_path']
+    '''
+    Instances operate as a dictionary with extra methods for
+    checking keys and values, encrypting and writing the dictionary
+    content to an aes file, etc.
+
+    Attributes:
+        SEED_FILE_PATH (str):
+            The file name/path of the encrypted seed file 
+    '''
+    def __init__(self):
+        '''
+        The initialization handles decrypting the content of the seed file
+        with the password stored in the keychain. It prompts the user for
+        the password if it can't be found in the keychain.
+        '''
+        # Decrypt and add the contents of the seed_file to this
+        #  instances dict
+        #
+        # Get the password from the keyring if it exists
+        password = keyring_storage.get_keyring_password()
+        seed_file_content = None
+        getpass_message = "Enter the seed file's decryption key: "
+        while True:
+            # If there isn't a password in the keyring, or the
+            #  wrong decryption password was used
+            if not password or seed_file_content == False:
+                # Ask the user for a password
+                try:
+                    password = getpass(getpass_message)
+                except KeyboardInterrupt: # except a keyboard interrupt
+                    print('\nCanceled')
+                    quit(1)
+            try:
+                # Decrypt the seed file
+                seed_file_content = decrypt_from_file(self.SEED_FILE_PATH, password)
+            except FileNotFoundError:
+                self.password = password
+                self.write()
+                seed_file_content = decrypt_from_file(self.SEED_FILE_PATH, password)
+
+            # If the incorrect key is given
+            if seed_file_content == False:
+                getpass_message = "Incorrect Password, Try Again: "
+                # Loop to decrypt again
+                continue
+            # If the file is decrypted successfully, update the
+            #  keyring password and break
+            keyring_storage.set_keyring_password(password)
+            self.password = password
+            break
+       
+        # If the seed file has any seeds, add them to instance dict
+        if seed_file_content:
+            for key,value in seed_file_content.items():
+                self[key] = value
+
+
+    def __setitem__(self, key, value):
+        if generators.verify_totp_seed(value):
+            super().__setitem__(key, value)
+
+    def __getitem__(self, key):
+        if key not in self:
+            raise KeyError('Key not found')
+
+        return super().__getitem__(key)
+
+    def write(self):
+        '''
+        Write current seed dictionary to encrypted file
+        '''
+        data = dict(self)
+        encrypt_to_file(data, self.SEED_FILE_PATH, self.password)
 

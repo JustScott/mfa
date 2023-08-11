@@ -1,4 +1,6 @@
 __pycache__
 venv
 test.json
+mfa_config.json
+mfa_secrets.aes
 problems.md

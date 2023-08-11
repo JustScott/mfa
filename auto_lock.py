@@ -40,12 +40,12 @@ seed encryption password from the systems keyring
 
 def loop():
     while True:
-        settings = config.Config(universal.CONFIG_FILE)
-        minutes = settings.get("auto_lock_interval", 0)
+        settings = config.Config(universal.CONFIG_FILE_PATH)
+        minutes = int(settings.get("auto_lock_interval", 0))
 
         # If the minute value is zero, that's a single to stop
         #  the script
-        if minutes <= 0:
+        if int(minutes) < 1:
             quit()
 
         seconds = minutes*60

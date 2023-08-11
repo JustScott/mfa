@@ -17,6 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import psutil
+import os
 
 __author__ = "Scott Wyman (development@scottwyman.me)"
 
@@ -24,7 +25,7 @@ __license__ = "GPLv3"
 
 __date__ = "July 26, 2023"
 
-__all__ = [""]
+__all__ = ["process_is_running"]
 
 __doc__ = (
 '''
@@ -33,8 +34,9 @@ all the rest of the scripts in this project
 '''
 )
 
-BASE_PATH = "/home/administrator/Git/Local/mfa"
-CONFIG_FILE = BASE_PATH+"/mfa_config.json"
+HOME_PATH = os.environ["HOME"]
+BASE_PATH = HOME_PATH+"/Git/Local/mfa"
+CONFIG_FILE_PATH = BASE_PATH+"/mfa_config.json"
 
 
 def process_is_running(*command_keywords: str) -> bool:
@@ -67,3 +69,6 @@ def process_is_running(*command_keywords: str) -> bool:
 
     return False
 
+
+if __name__=="__main__":
+    pass
