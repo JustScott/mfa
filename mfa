@@ -317,8 +317,6 @@ def import_config(file_path: str):
 
 
 if __name__=="__main__":
-    app()
-
     seed_dict = SeedDict()
 
     # If the auto lock is on in the config file and the auto_lock.py script isn't running
@@ -326,4 +324,4 @@ if __name__=="__main__":
         # Turn on auto locking with the saved interval
         auto_lock(settings['auto_lock_interval'])
 
-
+    app()
