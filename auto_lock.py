@@ -43,13 +43,14 @@ def loop():
         settings = config.Config(universal.CONFIG_FILE_PATH)
         minutes = int(settings.get("auto_lock_interval", 0))
 
+        seconds = minutes*60
+        time.sleep(seconds)
+
         # If the minute value is zero, that's a single to stop
         #  the script
         if int(minutes) < 1:
             quit()
 
-        seconds = minutes*60
-        time.sleep(seconds)
         keyring_storage.delete_keyring_password()
 
 

@@ -69,6 +69,17 @@ def process_is_running(*command_keywords: str) -> bool:
 
     return False
 
+def ignore_warnings(test_func):
+    '''
+    Ignores Resource warning errors, which are a bug
+    '''
+    def do_test(self, *args, **kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ResourceWarning)
+            test_func(self, *args, **kwargs)
+    return do_test
+
+
 
 if __name__=="__main__":
     pass

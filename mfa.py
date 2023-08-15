@@ -1,6 +1,6 @@
 #!/home/administrator/Git/Local/mfa/venv/bin/python
 #
-# mfa - part of the mfa project
+# mfa.py - part of the mfa project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -29,6 +29,7 @@ import os
 import universal
 import config
 from pprint import pprint
+import typing
 
 __author__ = "Scott Wyman (development@scottwyman.me)"
 
@@ -36,7 +37,7 @@ __license__ = "GPLv3"
 
 __date__ = "July 26, 2023"
 
-__all__ = [""]
+__all__ = []
 
 __doc__ = (
 '''
@@ -48,9 +49,47 @@ A simple TOTP MFA CLI authenticator
 app = typer.Typer()
 settings = config.Config(universal.CONFIG_FILE_PATH)
 
+# Returns True if running directly, False if imported. Helpful for suppressing
+#  stdout during
+def output(
+        print_statement: str=None, return_code: int=0, raw_data: typing.Any=None
+    ) -> typing.Union[typing.Any, None]:
+    '''
+    prints the print_statement if being run direcly, or returns the data
+    if being imported
+
+    Args:
+        print_statement (str, *optional): 
+            The string to print when the script is ran directly
+        
+        return_code (int, *optional):
+            DEFAULT 0
+
+            This code is returned to the terminal after the script is ran
+            directly. 0 signifies the command was successful, while 1
+            through 254 mean the command couldn't do what it's expected to
+            do given the user input (or lack of input).
+
+        raw_data (Any, *optional):
+            The data to return when the scripts modules are being imported
+            by another script
+
+    Returns:
+        Any OR None: Any raw data type if imported, or none if ran directly
+    '''
+    # If script is imported
+    if __name__!="__main__":
+        return raw_data
+
+    if print_statement:
+        pprint(print_statement)
+    quit(return_code)
+
+
+
 
 @app.command()
-def show(name: str) -> None:
+def show(name: str) -> typing.Union[str, bool]:
     '''
     Show a single name and generated TOTP code
 
@@ -61,26 +100,39 @@ def show(name: str) -> None:
 
     if name in seed_dict:
         code = generators.get_totp_code(seed_dict[name])
-        print(f"{name} - {code}")
+        return output(f"{name} - {code}", 0, str(code))
     else:
-        print(f"{name} not in seed file")
+        return output(f"{name} not in seed file", 1, False)
 
 @app.command()
-def show_all() -> None:
+def show_all() -> typing.Union[dict, bool]:
     '''
     Show all the names and generated TOTP codes
     '''
     seed_dict = SeedDict()
+    seed_names_codes = {}
 
     if seed_dict:
-        for name in seed_dict:
-            show(name)
+        seed_names_codes = {
+            name:generators.get_totp_code(seed_dict[name])
+            for name in seed_dict
+        }
+        
+        if __name__=="__main__":
+            for name,code in seed_names_codes.items():
+                print(f"{name} - {code}")
+
+        return output(
+            None,
+            0,
+            seed_names_codes
+        )
 
     else:
-        print(" - Seed file is empty - ")
+        return output(" - Seed file is empty - ", 1, False)
 
 @app.command()
-def show_seed(name: str) -> None:
+def show_seed(name: str) -> typing.Union[str, bool]:
     '''
     Show a seed phrase from your seed file
 
@@ -90,12 +142,12 @@ def show_seed(name: str) -> None:
     seed_dict = SeedDict()
 
     if name in seed_dict:
-        print(f"{name} - {seed_dict[name]}")
+        return output(f"{name} - {seed_dict[name]}", 0, seed_dict[name])
     else:
-        print(f"{name} not in seed file")
+        return output(f"{name} not in seed file", 1, False)
 
 @app.command()
-def add(name: str, seed: str, force: bool=False) -> None:
+def add(name: str, seed: str, force: bool=False) -> typing.Union[dict, bool]:
     '''
     Add a new entry to your seed file
 
@@ -109,17 +161,17 @@ def add(name: str, seed: str, force: bool=False) -> None:
     seed_dict = SeedDict()
 
     if name in seed_dict and force == False:
-        print(f"{name} already exists, pass '--force' to true to overwrite")
+        return output(f"{name} already exists, pass '--force' to true to overwrite", 0, False)
     else:
         seed_dict[name] = seed
         if seed_dict.get(name) == seed:
             show(name)
         else:
-            print("Incorrect seed format")
+            return output("Incorrect seed format", 0, False)
         seed_dict.write()
 
 @app.command()
-def delete(name: str) -> None:
+def delete(name: str) -> typing.Union[str, bool]:
     '''
     Delete an entry from your seed file
 
@@ -129,12 +181,16 @@ def delete(name: str) -> None:
     seed_dict = SeedDict()
 
     if name in seed_dict:
+        seed = seed_dict[name]
         del seed_dict[name]
         seed_dict.write()
+        return output(f"Deleted seed for '{name}'", 0, seed)
+    else:
+        return output(f"No seed named '{name}'", 1, False)
 
 
 @app.command()
-def export_seeds(encrypt: bool=True, file_name: str="") -> None:
+def export_seeds(encrypt: bool=True, file_name: str="") -> typing.Union[dict, str, bool]:
     '''
     Export seed file content to a file or stdout in an encrypted or plain format
 
@@ -151,23 +207,23 @@ def export_seeds(encrypt: bool=True, file_name: str="") -> None:
         if encrypt:
             # print the seed files encrypted content to stdout
             with open(SeedDict.SEED_FILE_PATH, 'r') as file:
-                print(file.read())
-                return
+                encrypted_file_content = file.read()
+                return output(encrypted_file_content, 0, encrypted_file_content)
         # print the unencrypted seeds to stdout
-        print(json.dumps(SeedDict()))    
-        return
+        return output(dict(SeedDict()), 0, dict(SeedDict()))
     
     if file_name:
         if encrypt:
             # Copy the seed files encrypted content to the export file
             shutil.copyfile(SeedDict.SEED_FILE_PATH, file_name)
-            return
+            return True
         # Write the un-encrypted seed dict to the file
         with open(file_name, 'w') as export_file: 
-            json.dump(SeedDict(), export_file)
+            json.dump((dict(SeedDict())), export_file)
+            return True
 
 @app.command()
-def import_seeds(file_path: str) -> None:
+def import_seeds(file_path: str) -> bool:
     '''
     Import a previously exported file, overwriting the existing seeds
 
@@ -190,6 +246,7 @@ def import_seeds(file_path: str) -> None:
             for name,seed in file_content.items():
                 new_seed_dict[name] = seed
             new_seed_dict.write()
+            return output(f"'{file_path}' imported successfully", 0, True)
 
         # If the file doesn't contain valid json data
         except (AttributeError,json.decoder.JSONDecodeError):
@@ -197,26 +254,29 @@ def import_seeds(file_path: str) -> None:
             if seed_file.decrypt_from_file(file_path, seed_dict.password):
                 # Copy the encrypted file directly
                 shutil.copyfile(file_path, seed_dict.SEED_FILE_PATH)
-                return
+                return output("Import Successful!", 0, True)
 
             # If the file didn't decrypt correctly
-            print(f"Either the incorrect password was used, or '{file_path}' is corrupt")
+            return output(
+                f"Either the incorrect password was used, or '{file_path}' is corrupt", 
+                1,
+                False
+            )
 
     except FileNotFoundError:
-        print(f"'{file_path}' doesn't exists")
-        quit(1)
+        return output(f"'{file_path}' doesn't exists", 1, False)
 
 
 @app.command()
-def lock():
+def lock() -> typing.Union[bool, None]:
     '''
     Lock the seed file, AKA remove the password from the keyring
     '''
     keyring_storage.delete_keyring_password()
-    print("Seed file locked!")
+    return output("Seed file locked!", 0, True)
 
 @app.command()
-def auto_lock(minutes: int):
+def auto_lock(minutes: int) -> typing.Union[int, bool]:
     '''
     Lockout access to the seed file in x minute intervals
 
@@ -234,8 +294,7 @@ def auto_lock(minutes: int):
     if minutes < 1:
         settings['auto_lock_interval'] = 0
         settings.write()
-        print("Auto locking turned off")
-        return
+        return output("Auto locking turned off", 0, True)
 
     # Start the auto_lock.py script if it's not already running
     if not universal.process_is_running('python3', 'auto_lock.py'):
@@ -243,14 +302,14 @@ def auto_lock(minutes: int):
 
     settings['auto_lock_interval'] = int(minutes)
     settings.write()
-    print(f"Access to the MFA codes will be locked every {minutes} minute(s)")
+    return output(f"Access to the MFA codes will be locked every {minutes} minute(s)", 0, int(minutes))
 
 
 @app.command()
 def config_settings(
         seed_file_path: str=None, config_file_path: str=None, 
         auto_lock_interval: str=None
-    ):
+    ) -> typing.Union[dict, None]:
     '''
     Change any setting in the config file
 
@@ -262,7 +321,7 @@ def config_settings(
     '''
     for setting,value in locals().items():
         # If the user changes auto_lock_interval, just pass the value
-        # to the auto_lock function since it already has the logic to
+        #  to the auto_lock function since it already has the logic to
         #  check and set the value
         if setting == 'auto_lock_interval' and value != None and value.isdigit():
             auto_lock(int(value))
@@ -275,9 +334,10 @@ def config_settings(
             settings[setting] = value
 
     settings.write()
+    return output(f"Settings Changed:\n{dict(settings)}", 0, dict(settings))
 
 @app.command()
-def export_config(export_file_path: str=""):
+def export_config(export_file_path: str="") -> typing.Union[dict, None]:
     '''
     Export your json config settings to a file or stdout
     
@@ -290,10 +350,10 @@ def export_config(export_file_path: str=""):
         shutil.copyfile(universal.CONFIG_FILE_PATH, export_file_path)
         return
 
-    print(json.dumps(settings))
+    return output(settings, 0, settings)
 
 @app.command()
-def import_config(file_path: str):
+def import_config(file_path: str) -> bool:
     '''
     Import a previously exported config file
 
@@ -309,16 +369,14 @@ def import_config(file_path: str):
         # Overwrite the existing config file if it exists, with the user
         #  provided config file
         shutil.copyfile(file_path, universal.CONFIG_FILE_PATH)
-        print("Import Successful!")
+        return output("Import Successful!", 0, True)
     except FileNotFoundError:
-        print(f"Can't open the file '{file_path}'")
+        return output(f"Can't open the file '{file_path}'", 1, False)
     except json.decoder.JSONDecodeError:
-        print(f"'{file_path}' is not a valid MFA configuration file")
+        return output(f"'{file_path}' is not a valid MFA configuration file", 1, False)
 
 
 if __name__=="__main__":
-    seed_dict = SeedDict()
-
     # If the auto lock is on in the config file and the auto_lock.py script isn't running
     if settings.get('auto_lock_interval') and not universal.process_is_running('python3', 'auto_lock.py'):
         # Turn on auto locking with the saved interval

@@ -1,3 +1,4 @@
+#!/home/administrator/Git/Local/mfa/venv/bin/python
 #
 # generators.py - part of the mfa project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
@@ -48,18 +49,18 @@ def verify_totp_seed(seed: str) -> bool:
         return True
     return False
 
-def get_totp_code(seed: str) -> Union[int, bool]:
+def get_totp_code(seed: str) -> Union[str, bool]:
     '''
 
     Args:
         seed (str): The TOTP seed
 
     Returns:
-        int or bool: 
+        str or bool: 
             The current TOTP code if a valid seed is given, otherwise False
     '''
     try:
-        return int(pyotp.TOTP(seed).now())
+        return str(pyotp.TOTP(seed).now())
     except Exception:
         return False
 
