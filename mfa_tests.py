@@ -23,6 +23,8 @@ from random import randint
 from universal import ignore_warnings
 import mfa
 import generators
+import json
+import os
 
 
 __author__ = "Scott Wyman (development@scottwyman.me)"
@@ -50,8 +52,6 @@ class MFATests(unittest.TestCase):
 
     def test_add_show_delete(self):
         '''
-        Ensures new seeds can be added to the mfa file.
-
         Tests: mfa [add, show, show-all, show-seed, delete]
         '''
         random_seed_name = random_str(20)
@@ -101,6 +101,49 @@ class MFATests(unittest.TestCase):
         else:
             self.assertTrue(False, msg="Test seed names not in seed file")
 
+
+    def test_export_import_seeds(self):
+        '''
+        Tests: mfa [export-seeds, import-seeds]
+
+        Ensures the export and import were successful by checking
+        that all the names and codes returned by `mfa.show_all` are
+        the same before and after each export and import
+        '''
+        random_test_file = 'export_import_seeds_test.test'
+        
+        # Test export/import with & without encryption, with file_path
+        for encryption_bool,assert_message in zip([True,False],["with","without"]):
+            all_names_codes_before = mfa.show_all()
+            
+            mfa.export_seeds(encrypt=encryption_bool, file_path=random_test_file)
+            mfa.import_seeds(file_path=random_test_file)
+
+            self.assertTrue(
+                all_names_codes_before == mfa.show_all(),
+                msg=f"Exporting/Importing to file {assert_message} encryption failed"
+            )
+
+            os.remove(random_test_file) # Remove the test file
+
+            # Test export/import with & without encryption, without file_path
+            #
+            all_names_codes_before = mfa.show_all()
+
+            exported_seeds = mfa.export_seeds(encrypt=encryption_bool)
+            with open(random_test_file, 'w') as file:
+                if encryption_bool:
+                    file.write(exported_seeds)
+                else:
+                    json.dump(exported_seeds, file)
+            mfa.import_seeds(random_test_file)
+
+            self.assertTrue(
+                all_names_codes_before == mfa.show_all(),
+                msg=f"Exporting/Importing to stdout {assert_message} encryption failed"
+            )
+
+            os.remove(random_test_file) # Remove the test file
 
 
 if __name__=="__main__":

@@ -190,7 +190,7 @@ def delete(name: str) -> typing.Union[str, bool]:
 
 
 @app.command()
-def export_seeds(encrypt: bool=True, file_name: str="") -> typing.Union[dict, str, bool]:
+def export_seeds(encrypt: bool=True, file_path: str="") -> typing.Union[dict, str, bool]:
     '''
     Export seed file content to a file or stdout in an encrypted or plain format
 
@@ -198,12 +198,12 @@ def export_seeds(encrypt: bool=True, file_name: str="") -> typing.Union[dict, st
         encrypt (bool, *optional):\n
             Whether to export the file as encrypted or plain
         \n
-        file_name (str, *optional):\n
+        file_path (str, *optional):\n
             The name of the file to export to. Output is directed to
-            stdout if no file_name is provided.
+            stdout if no file_path is provided.
 
     '''
-    if not file_name:
+    if not file_path:
         if encrypt:
             # print the seed files encrypted content to stdout
             with open(SeedDict.SEED_FILE_PATH, 'r') as file:
@@ -212,13 +212,13 @@ def export_seeds(encrypt: bool=True, file_name: str="") -> typing.Union[dict, st
         # print the unencrypted seeds to stdout
         return output(dict(SeedDict()), 0, dict(SeedDict()))
     
-    if file_name:
+    if file_path:
         if encrypt:
             # Copy the seed files encrypted content to the export file
-            shutil.copyfile(SeedDict.SEED_FILE_PATH, file_name)
+            shutil.copyfile(SeedDict.SEED_FILE_PATH, file_path)
             return True
         # Write the un-encrypted seed dict to the file
-        with open(file_name, 'w') as export_file: 
+        with open(file_path, 'w') as export_file:
             json.dump((dict(SeedDict())), export_file)
             return True
 
