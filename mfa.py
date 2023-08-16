@@ -307,9 +307,8 @@ def auto_lock(minutes: int) -> typing.Union[int, bool]:
 
 @app.command()
 def config_settings(
-        seed_file_path: str=None, config_file_path: str=None, 
-        auto_lock_interval: str=None
-    ) -> typing.Union[dict, None]:
+        seed_file_path: str=None, auto_lock_interval: int=None
+    ) -> typing.Union[dict, bool, None]:
     '''
     Change any setting in the config file
 
@@ -323,11 +322,17 @@ def config_settings(
         # If the user changes auto_lock_interval, just pass the value
         #  to the auto_lock function since it already has the logic to
         #  check and set the value
-        if setting == 'auto_lock_interval' and value != None and value.isdigit():
-            auto_lock(int(value))
+        if setting == 'auto_lock_interval' and isinstance(value, int):
+            auto_lock(value)
         if setting == 'seed_file_path' and value:
-            shutil.move(SeedDict.SEED_FILE_PATH, value)
-            
+            try:
+                shutil.move(SeedDict.SEED_FILE_PATH, value)
+            except PermissionError:
+                # If script is ran directly
+                if __name__=="__main__":
+                    print(f"You don't have permission to write to '{value}'")
+                    quit(1)
+                raise PermissionError("You don't have permission to write to '{value}'")
 
         # Otherwise, if another value is passed, set it in the config file
         if value:

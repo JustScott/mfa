@@ -23,6 +23,7 @@ from random import randint
 from universal import ignore_warnings
 import mfa
 import generators
+import keyring_storage
 import json
 import os
 
@@ -101,6 +102,27 @@ class MFATests(unittest.TestCase):
         else:
             self.assertTrue(False, msg="Test seed names not in seed file")
 
+    def test_lock(self):
+        '''
+        Tests: mfa [lock]
+        '''
+        # Unlock the seed file if it's locked
+        mfa.show_all()
+
+        # Check that the password is in the keyring
+        self.assertTrue(
+            keyring_storage.get_keyring_password() != None,
+            msg="The password failed to add to the keyring"
+        )
+
+        # Remove it from the keyring
+        mfa.lock()
+
+        # Check that the password is no longer in the keyring
+        self.assertTrue(
+            keyring_storage.get_keyring_password() == None,
+            msg="The password failed to remove from the keyring"
+        )
 
     def test_export_import_seeds(self):
         '''
@@ -110,7 +132,7 @@ class MFATests(unittest.TestCase):
         that all the names and codes returned by `mfa.show_all` are
         the same before and after each export and import
         '''
-        random_test_file = 'export_import_seeds_test.test'
+        random_test_file = 'export_import_seeds.test'
         
         # Test export/import with & without encryption, with file_path
         for encryption_bool,assert_message in zip([True,False],["with","without"]):
@@ -144,6 +166,39 @@ class MFATests(unittest.TestCase):
             )
 
             os.remove(random_test_file) # Remove the test file
+
+    def test_export_import_settings_config(self):
+        '''
+        Tests: mfa [export-config, import-confg, config-settings]
+        '''
+        random_test_file = 'export_import_config.test'
+
+        # Test exporting to stdout
+        config_dict_before = dict(mfa.export_config())
+
+        # Test both export and importing to file
+        mfa.export_config(random_test_file)
+        mfa.import_config(random_test_file)
+
+        self.assertTrue(
+            config_dict_before == dict(mfa.export_config()),
+            msg="Config before export & import test doesn't match config after"
+        )
+
+        
+        # Get the original value for setting it back after the test
+        original_lock_interval = mfa.settings["auto_lock_interval"]
+
+        # Test config settinegs
+        mfa.config_settings(auto_lock_interval=5)
+
+        self.assertTrue(
+            mfa.settings["auto_lock_interval"] == 5,
+            msg="Failed to set auto_lock_interval in config"
+        )
+
+        # Set auto_lock_interval back to its origionval vlaue
+        mfa.config_settings(auto_lock_interval=original_lock_interval)
 
 
 if __name__=="__main__":

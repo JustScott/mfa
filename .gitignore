@@ -4,4 +4,5 @@ test.json
 mfa_config.json
 mfa_secrets.aes
 problems.md
-export_import_seeds_test.test
+export_import_seeds.test
+export_import_config.test
