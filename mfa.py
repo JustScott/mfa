@@ -225,7 +225,7 @@ def export_seeds(encrypt: bool=True, file_path: str="") -> typing.Union[dict, st
 @app.command()
 def import_seeds(file_path: str) -> bool:
     '''
-    Import a previously exported file, overwriting the existing seeds
+    Import a previously exported file, overwriting the existing seed file
 
     Args:\n
         file_path (str):\n
@@ -243,8 +243,15 @@ def import_seeds(file_path: str) -> bool:
                 file_content = json.load(file)
 
             new_seed_dict = SeedDict()
+            # Delete all old keys from the seed file before importing
+            #  the new seeds
+            for old_dict_key in new_seed_dict.copy():
+                del new_seed_dict[old_dict_key]
+
+            # Loop through new imported seeds and add each to the seed file
             for name,seed in file_content.items():
                 new_seed_dict[name] = seed
+
             new_seed_dict.write()
             return output(f"'{file_path}' imported successfully", 0, True)
 
