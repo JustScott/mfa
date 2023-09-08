@@ -1,5 +1,3 @@
-#!/home/administrator/Git/Local/mfa/venv/bin/python
-#
 # seed_file.py - part of the mfa project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
@@ -146,6 +144,10 @@ class SeedDict(dict):
     _settings = config.Config(universal.CONFIG_FILE_PATH)
     # Get the seed_file_path from the config file if it exists
     SEED_FILE_PATH = _settings.get("seed_file_path")
+    if 'mfa_secrets.aes' not in SEED_FILE_PATH:
+        if SEED_FILE_PATH[-1] != "/":
+            SEED_FILE_PATH += "/"
+        SEED_FILE_PATH += "mfa_secrets.aes"
     # If the seed_file_path key doesn't exist in the database, and doesn't
     #  have a valid value
     if not SEED_FILE_PATH:

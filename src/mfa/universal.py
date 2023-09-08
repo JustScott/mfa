@@ -1,5 +1,3 @@
-#!/home/administrator/Git/Local/mfa/venv/bin/python
-#
 # universal.py - part of the mfa project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
@@ -35,8 +33,9 @@ all the rest of the scripts in this project
 )
 
 HOME_PATH = os.environ["HOME"]
-BASE_PATH = HOME_PATH+"/Git/Local/mfa"
-CONFIG_FILE_PATH = BASE_PATH+"/mfa_config.json"
+BASE_PATH = ""
+PACKAGE_PATH = BASE_PATH
+CONFIG_FILE_PATH = BASE_PATH+"mfa_config.json"
 
 
 def process_is_running(*command_keywords: str) -> bool:

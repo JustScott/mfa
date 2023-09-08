@@ -1,6 +1,4 @@
-#!/home/administrator/Git/Local/mfa/venv/bin/python
-#
-# generators.py - part of the mfa project
+# auto_lock.py - part of the mfa project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,9 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
-import pyotp
-from typing import Union
+import universal
+import time
+import config
+import os
+import keyring_storage
 
 __author__ = "Scott Wyman (development@scottwyman.me)"
 
@@ -26,42 +26,32 @@ __license__ = "GPLv3"
 
 __date__ = "July 26, 2023"
 
-__all__ = ["verify_totp_seed", "get_totp_code"]
+__all__ = [""]
 
 __doc__ = (
 '''
-Functions for generating and verifying totp codes & seeds
+A simple background script that continuously removes the
+seed encryption password from the systems keyring
 '''
 )
 
 
-def verify_totp_seed(seed: str) -> bool:
-    '''
-    Verifies the format of a totp seed phrase/key
+def loop():
+    while True:
+        settings = config.Config(universal.CONFIG_FILE_PATH)
+        minutes = int(settings.get("auto_lock_interval", 0))
 
-    Args:
-        seed (str): The TOTP seed
-    
-    Returns:
-        bool: True if correctly formatted, otherwise False
-    '''
-    if get_totp_code(seed):
-        return True
-    return False
+        seconds = minutes*60
+        time.sleep(seconds)
 
-def get_totp_code(seed: str) -> Union[str, bool]:
-    '''
+        # If the minute value is zero, that's a single to stop
+        #  the script
+        if int(minutes) < 1:
+            quit()
 
-    Args:
-        seed (str): The TOTP seed
+        keyring_storage.delete_keyring_password()
 
-    Returns:
-        str or bool: 
-            The current TOTP code if a valid seed is given, otherwise False
-    '''
-    try:
-        return str(pyotp.TOTP(seed).now())
-    except Exception:
-        return False
 
+if __name__=="__main__":
+    loop()    
 

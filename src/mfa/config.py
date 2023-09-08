@@ -1,5 +1,3 @@
-#!/home/administrator/Git/Local/mfa/venv/bin/python
-#
 # config.py - part of the mfa project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
@@ -34,7 +32,6 @@ For interracting with a json config file
 )
 
 
-
 class Config(dict):
     def __init__(self, config_path: str):
         self.config_path = config_path
@@ -64,8 +61,10 @@ class Config(dict):
         super().__setitem__(key,value)
 
     def __getitem__(self, key):
-        return super().__getitem__(key)   
-
+        try:
+            return super().__getitem__(key)   
+        except KeyError:
+            return
     
     def write(self):
         with open(self.config_path, 'w') as config_file:

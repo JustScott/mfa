@@ -1,4 +1,4 @@
-#!/home/administrator/Git/Local/mfa/venv/bin/python
+#!/usr/bin/python3
 #
 # mfa.py - part of the mfa project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
@@ -164,11 +164,11 @@ def add(name: str, seed: str, force: bool=False) -> typing.Union[dict, bool]:
         return output(f"{name} already exists, pass '--force' to true to overwrite", 0, False)
     else:
         seed_dict[name] = seed
+        seed_dict.write()
         if seed_dict.get(name) == seed:
             show(name)
         else:
             return output("Incorrect seed format", 0, False)
-        seed_dict.write()
 
 @app.command()
 def delete(name: str) -> typing.Union[str, bool]:
@@ -305,7 +305,7 @@ def auto_lock(minutes: int) -> typing.Union[int, bool]:
 
     # Start the auto_lock.py script if it's not already running
     if not universal.process_is_running('python3', 'auto_lock.py'):
-        os.system(f'{universal.BASE_PATH}/venv/bin/python3 {universal.BASE_PATH}/auto_lock.py &')
+        os.system(f'python3 auto_lock.py &')
 
     settings['auto_lock_interval'] = int(minutes)
     settings.write()
@@ -333,20 +333,32 @@ def config_settings(
             auto_lock(value)
         if setting == 'seed_file_path' and value:
             try:
+                print(f"Moving {SeedDict.SEED_FILE_PATH} to {value}")
                 shutil.move(SeedDict.SEED_FILE_PATH, value)
+                print("Moved")
+                settings[setting] == value
             except PermissionError:
                 # If script is ran directly
                 if __name__=="__main__":
                     print(f"You don't have permission to write to '{value}'")
                     quit(1)
                 raise PermissionError("You don't have permission to write to '{value}'")
+            # If the file's already in the directory
+            except shutil.Error as e:
+                print(e)
+            # If the file doesn't exist
+            except FileNotFoundError:
+                return output(f"File doesn't exists {SeedDict.SEED_FILE_PATH+'/mfa_secrets.aes'}", 1, False)
 
         # Otherwise, if another value is passed, set it in the config file
         if value:
             settings[setting] = value
 
     settings.write()
-    return output(f"Settings Changed:\n{dict(settings)}", 0, dict(settings))
+    if dict(settings):
+        return output(f"New Settings: {dict(settings)}", 0, dict(settings))
+    return output(f"No Settings Changed", 0, dict(settings))
+    
 
 @app.command()
 def export_config(export_file_path: str="") -> typing.Union[dict, None]:

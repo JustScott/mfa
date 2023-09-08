@@ -1,5 +1,3 @@
-#!/home/administrator/Git/Local/mfa/venv/bin/python
-#
 # keyring_storage.py - part of the mfa project
 # Copyright (C) 2023, Scott Wyman, development@scottwyman.me
 #
@@ -16,11 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
+#import keyring
+from keyring import errors
 import keyring
-
-#from keyring.backends.libsecret import Keyring
-#keyring = Keyring()
 
 __author__ = "Scott Wyman (development@scottwyman.me)"
 
@@ -46,11 +42,27 @@ Manages storing the seed file's encryption password in the users keyring
 USERNAME = "python_keyring_user"
 SERVICE_NAME = "mfa_keyring"
 
-# Check if there's a suitable keyring available for the program to use
-try:
-    keyring.get_password("test", "test")
-except keyring.errors.NoKeyringError:
-    print(
+def test_keyring(keyring_class) -> bool:
+    try:
+        keyring_class.set_password('a', 'b', 'c')
+        return keyring_class.get_password('a', 'b')
+    except Exception:
+        return False
+
+# Test if the user has a usable keyring that will work by default
+if not test_keyring(keyring):
+    # Test if the user has a keyring that matches any of the additional 
+    #  supported backends
+    from keyring.backends.libsecret import Keyring
+    keyring = Keyring()
+    if not test_keyring(keyring):
+        from keyring.backends.kwallet import DBusKeyring as Keyring
+        keyring = Keyring()
+        if not test_keyring(keyring):
+            from keyring.backends.SecretService import Keyring
+            keyring = Keyring()
+            if not test_keyring(keyring):
+                print(
 """
 
 !-Missing a compatible keyring backend-!
@@ -72,9 +84,8 @@ Windows:
 * Windows Credential Locker
 
 """
-    )
-
-
+                )
+                quit(1)
 
 def set_keyring_password(password):
     '''
@@ -96,4 +107,3 @@ def delete_keyring_password():
         return keyring.delete_password(SERVICE_NAME, USERNAME)
     except keyring.errors.PasswordDeleteError:
         return True
-

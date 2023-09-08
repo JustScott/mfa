@@ -33,3 +33,37 @@ config-settings # Change any setting in the config file
 export-config   # Export the json config to a file or stdout
 import-config   # Import a previously exported json config file
 ```
+
+
+## Development
+
+( The `keyrings.alt` pypi package is used for testing only )
+
+### Setting up the environment
+
+```python3
+python3 -m venv venv # Create the virtual environment
+
+# Activate the virtual environment in the current terminal
+source venv/bin/activate 
+
+pip install -r requirements.txt # Install the required dependencies
+```
+
+### Running the application
+```python3
+cd src/mfa
+
+python3 mfa.py
+```
+
+### Running unittests
+
+```python3
+cd src/mfa # Moving to this directory to call the tests is important
+
+python3 ../../tests/mfa_tests.py # Run tests on mfa.py only
+#or
+bash ../../run_all_tests.sh # Run tests on all
+```
+
