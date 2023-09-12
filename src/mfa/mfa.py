@@ -347,7 +347,6 @@ def config_settings(
             try:
                 print(f"Moving {SeedDict.SEED_FILE_PATH} to {value}")
                 shutil.move(SeedDict.SEED_FILE_PATH, value)
-                print("Moved")
                 settings[setting] == value
             except PermissionError:
                 # If script is ran directly
@@ -373,7 +372,7 @@ def config_settings(
     
 
 @app.command()
-def export_config(export_file_path: str="") -> typing.Union[dict, None]:
+def export_config(export_file_path: str="") -> typing.Union[dict, bool, None]:
     '''
     Export your json config settings to a file or stdout
     
@@ -384,7 +383,7 @@ def export_config(export_file_path: str="") -> typing.Union[dict, None]:
     '''
     if export_file_path:
         shutil.copyfile(universal.CONFIG_FILE_PATH, export_file_path)
-        return
+        return True
 
     return output(settings, 0, settings)
 
@@ -405,12 +404,14 @@ def import_config(file_path: str) -> bool:
         # Overwrite the existing config file if it exists, with the user
         #  provided config file
         shutil.copyfile(file_path, universal.CONFIG_FILE_PATH)
-        return output("Import Successful!", 0, True)
     except FileNotFoundError:
         return output(f"Can't open the file '{file_path}'", 1, False)
     except json.decoder.JSONDecodeError:
         return output(f"'{file_path}' is not a valid MFA configuration file", 1, False)
+    except shutil.SameFileError:
+        pass
 
+    return output("Import Successful!", 0, True)
 
 if __name__=="__main__":
     # If the auto lock is on in the config file and the auto_lock.py script isn't running
