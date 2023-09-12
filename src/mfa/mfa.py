@@ -16,18 +16,30 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+# Imports work different depending on whether this is ran as a
+#  system application, or as an importable library
+try:
+    # For importing as a module
+    from mfa import generators
+    from mfa import keyring_storage
+    from mfa import seed_file
+    from mfa.seed_file import SeedDict
+    from mfa import universal
+    from mfa import config
+except ImportError:
+    # For running as a system application
+    import generators
+    import keyring_storage
+    import seed_file
+    from seed_file import SeedDict
+    import universal
+    import config
 
 import typer
 import json
-import generators
-import keyring_storage
-import seed_file
-from seed_file import SeedDict
 from getpass import getpass
 import shutil
 import os
-import universal
-import config
 from pprint import pprint
 import typing
 

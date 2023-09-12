@@ -14,11 +14,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import universal
+# Imports work different depending on whether this is ran as a
+#  system application, or as an importable library
+try:
+    # For importing as a module
+    from mfa import universal
+    from mfa import config
+    from mfa import keyring_storage
+except ImportError:
+    # For running as a system application
+    import universal
+    import config
+    import keyring_storage
+
 import time
-import config
 import os
-import keyring_storage
 
 __author__ = "Scott Wyman (development@scottwyman.me)"
 

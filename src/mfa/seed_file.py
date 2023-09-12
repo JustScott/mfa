@@ -14,6 +14,20 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+# Imports work different depending on whether this is ran as an
+#  application, or as an importable library
+try:
+    # For importing as a module
+    from mfa import universal
+    from mfa import config
+    from mfa import keyring_storage
+    from mfa import generators
+except ImportError:
+    # For running as a system application
+    import universal
+    import config
+    import keyring_storage
+    import generators
 
 from cryptography.fernet import Fernet
 from cryptography.fernet import InvalidToken
@@ -22,11 +36,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from base64 import urlsafe_b64encode
 import json
 from typing import Union
-import universal
-import config
-import keyring_storage
 from getpass import getpass
-import generators
 
 __author__ = "Scott Wyman (development@scottwyman.me)"
 
@@ -144,13 +154,14 @@ class SeedDict(dict):
     _settings = config.Config(universal.CONFIG_FILE_PATH)
     # Get the seed_file_path from the config file if it exists
     SEED_FILE_PATH = _settings.get("seed_file_path")
-    if 'mfa_secrets.aes' not in SEED_FILE_PATH:
-        if SEED_FILE_PATH[-1] != "/":
-            SEED_FILE_PATH += "/"
-        SEED_FILE_PATH += "mfa_secrets.aes"
+    if SEED_FILE_PATH:
+        if 'mfa_secrets.aes' not in SEED_FILE_PATH:
+            if SEED_FILE_PATH[-1] != "/":
+                SEED_FILE_PATH += "/"
+            SEED_FILE_PATH += "mfa_secrets.aes"
     # If the seed_file_path key doesn't exist in the database, and doesn't
     #  have a valid value
-    if not SEED_FILE_PATH:
+    else:
         # Set the seed file path in the config file to the default path
         _settings['seed_file_path'] = universal.HOME_PATH+"/mfa_secrets.aes"
         # Set the SEED_FILE_PATH class attribute

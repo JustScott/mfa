@@ -69,6 +69,9 @@ if not test_keyring(keyring):
 
 Install one of the packages below from your system's package manager.
 
+Testing:
+---------
+* `pip install keyrings.alt`
 
 Linux:
 ------
