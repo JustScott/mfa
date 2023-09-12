@@ -62,8 +62,6 @@ python3 mfa.py
 ```python3
 cd src/mfa # Moving to this directory to call the tests is important
 
-python3 ../../tests/mfa_tests.py # Run tests on mfa.py only
-#or
-bash ../../run_all_tests.sh # Run tests on all
+python3 -m unittest discover ../../unittests/ "*_tests.py" # Run all unittests
 ```
 
