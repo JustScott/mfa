@@ -119,7 +119,7 @@ True
 
 ### Setting up the environment
 
-```python3
+```bash
 python3 -m venv venv # Create the virtual environment
 
 # Activate the virtual environment in the current terminal
@@ -129,7 +129,7 @@ pip install -r requirements.txt # Install the required dependencies
 ```
 
 ### Running the application
-```python3
+```bash
 cd src/mfa
 
 python3 mfa.py
@@ -137,8 +137,26 @@ python3 mfa.py
 
 ### Running unittests
 
-```python3
+```bash
 cd src/mfa # Moving to this directory to call the tests is important
 
 python3 -m unittest discover ../../unittests/ "*_tests.py" # Run all unittests
+```
+
+### Packaging for PyPI
+
+```bash
+# 1. Update the package version in setup.py
+
+# 2. Package the project
+python3 setup.py sdist bdist_wheel
+
+# 3. Upload to PyPI
+twine upload dist/*
+```
+
+### Packaging for Arch Linux
+
+```bash
+# Coming soon...
 ```
