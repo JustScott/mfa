@@ -37,7 +37,6 @@ except ImportError:
 
 import typer
 import json
-from getpass import getpass
 import shutil
 import os
 from pprint import pprint
