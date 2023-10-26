@@ -2,16 +2,43 @@
 
 A simple TOTP MFA CLI Authenticator
 
+### License
+
+This project is licensed under the GNU General Public License, Version 3 (GPL-3.0). For the full text of the license, please see the [LICENSE](COPYING) file in this repository.
+
+**Note:** The GPLv3 is a strong copyleft license, and it may affect how you can use, modify, and distribute this software. Be sure to review the license terms and understand your rights and obligations when using this project.
+
+### Disclaimer
+
+Although I've done my best to make this project as secure as I can, I'm in
+no way a professional (or even intermediate) cryptographer. This project has
+not been audited by any professional cryptographers and should therefore be
+treated as insecure.
+
+Personally, I only use this project from within a Virtual Machine that has no
+connection to the internet, and I encrypt my `mfa_secrets.aes` file a second 
+time with the `openssl` CLI tool before transporting it. 
+
+I'm telling you this to show you that even I, the creator of this package, 
+am not risking my TOTP seeds by using this software in an insecure environment 
+(at least until it's formally audited by a security researcher, which will more
+than likely never happen)
 
 ### Security
 
+
 MFA uses pythons built-in cryptography library to encrypt your file
 with all your seed phrases (refered to as "seed file" in the project)
-with 256 bit AES in CBC mode. 
+with 256 bit AES in CBC mode, and your password is hashed using the pbkdf2
+algorithm with sha256 and 500,000 iterations.
 
-Your password is hashed using the pbkdf2 algorithm with sha256 and
-500,000 iterations. You set your password the first time you interact
-with the mfa tool and it should stay in your native keychain from there on.
+You set your password the first time you interact with the mfa tool and
+it should stay in your native keychain from there on unless you set it 
+to delete from the keychain in designated intervals. This will then prompt
+you for the password again the next time you attempt to access your keys which 
+is a much more secure way of doing it, especially if someone gains access
+to your system (physically or remotely).
+
 
 ### Features
 
@@ -115,4 +142,3 @@ cd src/mfa # Moving to this directory to call the tests is important
 
 python3 -m unittest discover ../../unittests/ "*_tests.py" # Run all unittests
 ```
-
